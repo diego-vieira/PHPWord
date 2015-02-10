@@ -39,7 +39,7 @@ class Table extends AbstractElement
         $rows = $this->element->getRows();
         $rowCount = count($rows);
         if ($rowCount > 0) {
-            $content .= '<table>' . PHP_EOL;
+            $content .= '<table style="border: 1px solid;">' . PHP_EOL;
             foreach ($rows as $row) {
                 /** @var $row \PhpOffice\PhpWord\Element\Row Type hint */
                 $rowStyle = $row->getStyle();
@@ -49,7 +49,7 @@ class Table extends AbstractElement
                 foreach ($row->getCells() as $cell) {
                     $writer = new Container($this->parentWriter, $cell);
                     $cellTag = $tblHeader ? 'th' : 'td';
-                    $content .= "<{$cellTag}>" . PHP_EOL;
+                    $content .= "<{$cellTag} style='border: 1px solid #000;'>" . PHP_EOL;
                     $content .= $writer->write();
                     $content .= '</td>' . PHP_EOL;
                 }

@@ -45,7 +45,7 @@ class Template
      *
      * @var string
      */
-    private $documentXML;
+    public $documentXML;
 
     /**
      * Document header XML
@@ -206,7 +206,8 @@ class Template
                 // If tmpXmlRow doesn't contain continue, this row is no longer part of the spanned row.
                 $tmpXmlRow = $this->getSlice($extraRowStart, $extraRowEnd);
                 if (!preg_match('#<w:vMerge/>#', $tmpXmlRow) &&
-                    !preg_match('#<w:vMerge w:val="continue" />#', $tmpXmlRow)) {
+                    !preg_match('#<w:vMerge w:val="continue" />#', $tmpXmlRow)
+                ) {
                     break;
                 }
                 // This row was a spanned row, update $rowEnd and search for the next row.
@@ -230,31 +231,30 @@ class Template
      * @param string $blockname
      * @param integer $clones
      * @param boolean $replace
+     * @param int $block_number
+     *
      * @return string|null
      */
-    public function cloneBlock($blockname, $clones = 1, $replace = true)
+    public function cloneBlock($blockname, $clones = 1, $replace = true, $block_number = 0)
     {
+        $regExpDelim = '/';
+        $open = preg_quote('${' . $blockname . '}', $regExpDelim);
+        $close = preg_quote('${/' . $blockname . '}', $regExpDelim);
+        $pattern = "{$regExpDelim}<w:p\s(?:(?!<w:p\s).)*?{$open}.*?\/w:p>(.*?)<w:p\s(?:(?!<w:p\s).)*?{$close}.*?\/w:p>{$regExpDelim}";
+
+        preg_match_all($pattern, $this->documentXML, $matchs);
         $xmlBlock = null;
-        preg_match(
-            '/(<\?xml.*)(<w:p.*>\${' . $blockname . '}<\/w:.*?p>)(.*)(<w:p.*\${\/' . $blockname . '}<\/w:.*?p>)/is',
-            $this->documentXML,
-            $matches
-        );
 
-        if (isset($matches[3])) {
-            $xmlBlock = $matches[3];
-            $cloned = array();
-            for ($i = 1; $i <= $clones; $i++) {
-                $cloned[] = $xmlBlock;
-            }
+        if (isset($matchs[1]) && isset($matchs[1][$block_number])) {
+            $xmlBlock = $matchs[1][$block_number];
 
-            if ($replace) {
-                $this->documentXML = str_replace(
-                    $matches[2] . $matches[3] . $matches[4],
-                    implode('', $cloned),
-                    $this->documentXML
-                );
+            for ($i = 0; $i < $clones; $i++) {
+                $xmlBlock .= $matchs[1][$block_number];
             }
+        }
+
+        if ($replace && $xmlBlock) {
+            $this->documentXML = preg_replace($pattern, $xmlBlock, $this->documentXML, 1);
         }
 
         return $xmlBlock;
@@ -264,23 +264,113 @@ class Template
      * Replace a block
      *
      * @param string $blockname
-     * @param string $replacement
+     * @param string $xmlBlock
+     * @param string $xmlDocument
+     *
+     * @return mixed|string
      */
-    public function replaceBlock($blockname, $replacement)
+    public function replaceBlock($blockname, $xmlBlock, $xmlDocument = '')
     {
-        preg_match(
-            '/(<\?xml.*)(<w:p.*>\${' . $blockname . '}<\/w:.*?p>)(.*)(<w:p.*\${\/' . $blockname . '}<\/w:.*?p>)/is',
-            $this->documentXML,
-            $matches
-        );
+        $regExpDelim = '/';
+        $open = preg_quote('${' . $blockname . '}', $regExpDelim);
+        $close = preg_quote('${/' . $blockname . '}', $regExpDelim);
+        $pattern = "{$regExpDelim}<w:p\s(?:(?!<w:p\s).)*?{$open}.*?\/w:p>(.*?)<w:p\s(?:(?!<w:p\s).)*?{$close}.*?\/w:p>{$regExpDelim}";
 
-        if (isset($matches[3])) {
-            $this->documentXML = str_replace(
-                $matches[2] . $matches[3] . $matches[4],
-                $replacement,
-                $this->documentXML
-            );
+        if (!$xmlDocument) {
+            $this->documentXML = preg_replace($pattern, $xmlBlock, $this->documentXML, 1);
+            $xmlDocument = $this->documentXML;
+        } else {
+            $xmlDocument = preg_replace($pattern, $xmlBlock, $xmlDocument, 1);
         }
+
+        return $xmlDocument;
+    }
+
+    /**
+     * Delete a tag
+     *
+     * @param string $tagname
+     * @param string $xmlDocument
+     *
+     * @return mixed|string
+     */
+    public function deleteTag($tagname, $xmlDocument = '')
+    {
+        $regExpDelim = '/';
+        $pattern = "{$regExpDelim}\\$\\{" . $tagname . ".*?\\}{$regExpDelim}";
+
+        if (!$xmlDocument) {
+            $this->documentXML = preg_replace($pattern, '', $this->documentXML);
+            $xmlDocument = $this->documentXML;
+        } else {
+            $xmlDocument = preg_replace($pattern, '', $xmlDocument);
+        }
+
+        return $xmlDocument;
+    }
+
+    /**
+     * Replace a block
+     *
+     * @param string $xmlBlock
+     * @param        $replacementBlock
+     * @param string $xmlDocument
+     *
+     * @return mixed|string
+     */
+    public function replaceBlockStr($xmlBlock, $replacementBlock, $xmlDocument = '')
+    {
+        if (!$xmlDocument) {
+            $this->documentXML = str_replace($xmlBlock, $replacementBlock, $this->documentXML);
+            $xmlDocument = $this->documentXML;
+        } else {
+            $xmlDocument = str_replace($xmlBlock, $replacementBlock, $xmlDocument);
+        }
+
+        return $xmlDocument;
+    }
+
+    /**
+     * Remove Tag
+     *
+     * @param string $blockname
+     * @param string $xmlDocument
+     *
+     * @return mixed|string
+     */
+    public function removeTag($blockname, $xmlDocument = '')
+    {
+        $regExpDelim = '/';
+        $open = preg_quote('${' . $blockname . '}', $regExpDelim);
+        $close = preg_quote('${/' . $blockname . '}', $regExpDelim);
+
+        $pattern_open = "{$regExpDelim}<w:p\s(?:(?!<w:p\s).)*?{$open}.*?\/w:p>{$regExpDelim}";
+        $pattern_close = "{$regExpDelim}<w:p\s(?:(?!<w:p\s).)*?{$close}.*?\/w:p>{$regExpDelim}";
+
+        if (!$xmlDocument) {
+            $this->documentXML = preg_replace($pattern_open, '', $this->documentXML, 1);
+            $this->documentXML = preg_replace($pattern_close, '', $this->documentXML, 1);
+            $xmlDocument = $this->documentXML;
+        } else {
+            $xmlDocument = preg_replace($pattern_open, '', $xmlDocument, 1);
+            $xmlDocument = preg_replace($pattern_close, '', $xmlDocument, 1);
+        }
+
+        return $xmlDocument;
+    }
+
+    /**
+     * Set a Template value for a block
+     *
+     * @param mixed $search
+     * @param mixed $replace
+     * @param integer $limit
+     *
+     * @return string
+     */
+    public function setValueBlock($block, $search, $replace, $limit = -1)
+    {
+        return $this->setValueForPart($block, $search, $replace, $limit);
     }
 
     /**
@@ -288,9 +378,9 @@ class Template
      *
      * @param string $blockname
      */
-    public function deleteBlock($blockname)
+    public function deleteBlock($blockname, $xmlBlock = '')
     {
-        $this->replaceBlock($blockname, '');
+        $this->replaceBlock($blockname, $xmlBlock);
     }
 
     /**
