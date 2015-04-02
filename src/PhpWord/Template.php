@@ -417,6 +417,8 @@ class Template
      */
     public function saveAs($strFilename)
     {
+        $this->removeOrphanTags();
+
         $tempFilename = $this->save();
 
         if (file_exists($strFilename)) {
@@ -535,5 +537,17 @@ class Template
             $endPosition = strlen($this->documentXML);
         }
         return substr($this->documentXML, $startPosition, ($endPosition - $startPosition));
+    }
+
+    public function removeOrphanTags()
+    {
+        $pattern = '/\${(.*?)}/';
+        preg_match_all($pattern, $this->documentXML, $matches);
+
+        if (isset($matches[1])) {
+            foreach ($matches[1] as $value) {
+                $this->removeTag($value);
+            }
+        }
     }
 }
