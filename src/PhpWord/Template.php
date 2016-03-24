@@ -18,7 +18,7 @@
 namespace PhpOffice\PhpWord;
 
 use PhpOffice\PhpWord\Exception\Exception;
-use PhpOffice\PhpWord\Shared\String;
+use PhpOffice\PhpWord\Shared\SharedString;
 use PhpOffice\PhpWord\Shared\ZipArchive;
 
 /**
@@ -277,13 +277,10 @@ class Template
         $pattern = "{$regExpDelim}<w:p\s(?:(?!<w:p\s).)*?{$open}.*?\/w:p>(.*?)<w:p\s(?:(?!<w:p\s).)*?{$close}.*?\/w:p>{$regExpDelim}";
 
         if (!$xmlDocument) {
-            $this->documentXML = preg_replace($pattern, $xmlBlock, $this->documentXML, 1);
             $xmlDocument = $this->documentXML;
-        } else {
-            $xmlDocument = preg_replace($pattern, $xmlBlock, $xmlDocument, 1);
         }
 
-        return $xmlDocument;
+        return preg_replace($pattern, $xmlBlock, $xmlDocument, 1);
     }
 
     /**
@@ -348,13 +345,11 @@ class Template
         $pattern_close = "{$regExpDelim}<w:p\s(?:(?!<w:p\s).)*?{$close}.*?\/w:p>{$regExpDelim}";
 
         if (!$xmlDocument) {
-            $this->documentXML = preg_replace($pattern_open, '', $this->documentXML, 1);
-            $this->documentXML = preg_replace($pattern_close, '', $this->documentXML, 1);
             $xmlDocument = $this->documentXML;
-        } else {
-            $xmlDocument = preg_replace($pattern_open, '', $xmlDocument, 1);
-            $xmlDocument = preg_replace($pattern_close, '', $xmlDocument, 1);
         }
+
+        $xmlDocument = preg_replace($pattern_open, '', $xmlDocument, 1);
+        $xmlDocument = preg_replace($pattern_close, '', $xmlDocument, 1);
 
         return $xmlDocument;
     }
@@ -451,7 +446,7 @@ class Template
             $search = '${' . $search . '}';
         }
 
-        if (!String::isUTF8($replace)) {
+        if (!SharedString::isUTF8($replace)) {
             $replace = utf8_encode($replace);
         }
         $replace = htmlspecialchars($replace);
@@ -540,8 +535,14 @@ class Template
     }
 
     public function removeOrphanTags()
-    {        
-        $pattern = '/(\${.*?})/';
-        $this->documentXML = preg_replace($pattern, '', $this->documentXML);
+    {
+        $pattern = '/\${(.*?)}/';
+        preg_match_all($pattern, $this->documentXML, $matches);
+
+        if (isset($matches[1])) {
+            foreach ($matches[1] as $value) {
+                $this->removeTag($value);
+            }
+        }
     }
 }
