@@ -277,7 +277,8 @@ class Template
         $pattern = "{$regExpDelim}<w:p\s(?:(?!<w:p\s).)*?{$open}.*?\/w:p>(.*?)<w:p\s(?:(?!<w:p\s).)*?{$close}.*?\/w:p>{$regExpDelim}";
 
         if (!$xmlDocument) {
-            $xmlDocument = $this->documentXML;
+            $this->documentXML = preg_replace($pattern, $xmlBlock, $this->documentXML, 1);
+            return $this->documentXML;
         }
 
         return preg_replace($pattern, $xmlBlock, $xmlDocument, 1);
@@ -298,7 +299,7 @@ class Template
 
         if (!$xmlDocument) {
             $this->documentXML = preg_replace($pattern, '', $this->documentXML);
-            $xmlDocument = $this->documentXML;
+            return $this->documentXML;
         } else {
             $xmlDocument = preg_replace($pattern, '', $xmlDocument);
         }
@@ -319,7 +320,7 @@ class Template
     {
         if (!$xmlDocument) {
             $this->documentXML = str_replace($xmlBlock, $replacementBlock, $this->documentXML);
-            $xmlDocument = $this->documentXML;
+            return $this->documentXML;
         } else {
             $xmlDocument = str_replace($xmlBlock, $replacementBlock, $xmlDocument);
         }
@@ -346,6 +347,10 @@ class Template
 
         if (!$xmlDocument) {
             $xmlDocument = $this->documentXML;
+            $xmlDocument = preg_replace($pattern_open, '', $xmlDocument, 1);
+            $xmlDocument = preg_replace($pattern_close, '', $xmlDocument, 1);
+            $this->documentXML = $xmlDocument;
+            return $this->documentXML;
         }
 
         $xmlDocument = preg_replace($pattern_open, '', $xmlDocument, 1);
