@@ -226,6 +226,29 @@ class Template
     }
 
     /**
+     * Count blocks
+     *
+     * @param string $blockname
+     *
+     * @return int
+     */
+    public function countBlocks($blockname)
+    {
+        $regExpDelim = '/';
+        $open = preg_quote('${' . $blockname . '}', $regExpDelim);
+        $close = preg_quote('${/' . $blockname . '}', $regExpDelim);
+        $pattern = "{$regExpDelim}<w:p\s(?:(?!<w:p\s).)*?{$open}.*?\/w:p>(.*?)<w:p\s(?:(?!<w:p\s).)*?{$close}.*?\/w:p>{$regExpDelim}";
+
+        preg_match_all($pattern, $this->documentXML, $matchs);
+        $count = 0;
+        if (isset($matchs[0]) && is_array($matchs[0])) {
+            $count = count($matchs[0]);
+        }
+
+        return (int)$count;
+    }
+
+    /**
      * Clone a block
      *
      * @param string $blockname
@@ -546,7 +569,7 @@ class Template
 
         if (isset($matches[1])) {
             foreach ($matches[1] as $value) {
-                $this->removeTag($value);
+                $this->setValue($value, '');
             }
         }
     }
