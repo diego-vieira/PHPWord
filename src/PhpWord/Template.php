@@ -478,6 +478,7 @@ class Template
             $replace = utf8_encode($replace);
         }
         $replace = htmlspecialchars($replace);
+        $replace = preg_replace('~\R~u', '</w:t><w:br/><w:t>', $replace);
 
         $regExpDelim = '/';
         $escapedSearch = preg_quote($search, $regExpDelim);
