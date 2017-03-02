@@ -96,6 +96,15 @@ class Template
         }
 
         $this->documentXML = $this->zipClass->getFromName('word/document.xml');
+
+        // Remove special tags between ${tags}
+        preg_match_all('/\${.*?}/', $this->documentXML, $matches);
+        foreach ($matches as $tags) {
+            foreach ($tags as $tag) {
+                $clean_tag = preg_replace('/<.*?>/', '', $tag);
+                $this->documentXML = str_replace($tag, $clean_tag, $this->documentXML);
+            }
+        }
     }
 
     /**
